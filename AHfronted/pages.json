@@ -1,0 +1,30 @@
+{
+	"pages": [
+	{
+		"path" : "pages/memory/memory",
+		"style" : 
+		{
+			"navigationBarTitleText" : "AHmemory",
+			"transparentTitle": "none"
+			// "enablePullDownRefresh" : true
+		}
+	},
+	{
+		"path": "pages/index/index",
+		"style": {
+			
+			"navigationBarTitleText" : "AHmemory",
+			"transparentTitle": "auto"
+		}
+	}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8",
+		"app-plus": {
+			"background": "#efeff4"
+		}
+	}
+}
