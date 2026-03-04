@@ -60,7 +60,7 @@ AHfronted/
 
 1. **克隆项目**
    ```bash
-   git clone [项目地址] AHCardMemory
+   git clone https://github.com/RHZHZ/AHCardMemory.git AHCardMemory
    ```
 
 2. **安装依赖**
