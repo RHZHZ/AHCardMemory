@@ -60,7 +60,7 @@ AHfronted/
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/RHZHZ/AHCardMemory.git AHCardMemory
+   git clone [项目地址] AHCardMemory
    ```
 
 2. **安装依赖**
@@ -81,6 +81,115 @@ AHfronted/
 
 4. **运行项目**
    在HBuilderX中打开项目，选择运行方式（微信小程序、H5、App等）
+
+## 📊 数据库设置
+
+### 数据库概述
+AHCardMemory应用需要后端数据库来存储学习卡片、学习计划等数据。
+
+### 数据库表结构
+
+#### 1. 卡片表 (cards)
+```sql
+CREATE TABLE cards (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    category VARCHAR(100) NOT NULL COMMENT '卡片分类',
+    content TEXT COMMENT '卡片内容',
+    image VARCHAR(255) COMMENT '图片URL',
+    chooseday INT DEFAULT 1 COMMENT '复习间隔天数',
+    lastReview INT DEFAULT 1 COMMENT '上次复习天数',
+    remembered BOOLEAN DEFAULT FALSE COMMENT '是否已记住',
+    startTime BIGINT COMMENT '创建时间戳',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习卡片表';
+```
+
+#### 2. 学习计划表 (plans)
+```sql
+CREATE TABLE plans (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    planName VARCHAR(100) NOT NULL COMMENT '计划名称',
+    planTime BIGINT NOT NULL COMMENT '计划完成时间戳',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习计划表';
+```
+
+### 快速设置指南
+
+#### MySQL/MariaDB 设置
+1. **创建数据库**
+   ```sql
+   CREATE DATABASE ahcard_memory CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+
+2. **创建用户并授权**
+   ```sql
+   CREATE USER 'ahcard_user'@'localhost' IDENTIFIED BY 'your_password';
+   GRANT ALL PRIVILEGES ON ahcard_memory.* TO 'ahcard_user'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+
+3. **导入表结构**
+   ```bash
+   mysql -u ahcard_user -p ahcard_memory < database/schema.sql
+   ```
+
+#### SQLite 设置（开发环境推荐）
+1. **创建数据库文件**
+   ```bash
+   sqlite3 ahcard_memory.db
+   ```
+
+2. **执行表结构**
+   ```sql
+   -- 卡片表
+   CREATE TABLE cards (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       category TEXT NOT NULL,
+       content TEXT,
+       image TEXT,
+       chooseday INTEGER DEFAULT 1,
+       lastReview INTEGER DEFAULT 1,
+       remembered INTEGER DEFAULT 0,
+       startTime INTEGER,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   );
+
+   -- 学习计划表
+   CREATE TABLE plans (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       planName TEXT NOT NULL,
+       planTime INTEGER NOT NULL,
+       is_active INTEGER DEFAULT 1,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   );
+
+   CREATE INDEX idx_category ON cards(category);
+   CREATE INDEX idx_active ON plans(is_active);
+   ```
+
+### 示例数据插入
+
+**卡片数据示例：**
+```sql
+INSERT INTO cards (category, content, image, chooseday, lastReview, startTime) VALUES
+('JavaScript', '闭包是指有权访问另一个函数作用域中变量的函数', 'https://example.com/js.jpg', 1, 1, UNIX_TIMESTAMP()*1000),
+('Vue.js', 'Vue使用虚拟DOM来高效更新真实DOM', 'https://example.com/vue.jpg', 1, 1, UNIX_TIMESTAMP()*1000),
+('CSS', 'Flexbox布局提供了更加有效的方式来布置、对齐和分配容器中项目的空间', 'https://example.com/css.jpg', 1, 1, UNIX_TIMESTAMP()*1000);
+```
+
+**学习计划示例：**
+```sql
+INSERT INTO plans (planName, planTime, is_active) VALUES
+('30天掌握前端基础', UNIX_TIMESTAMP(DATE_ADD(NOW(), INTERVAL 30 DAY))*1000, 1);
+```
 
 ## 📋 主要页面功能
 
@@ -154,6 +263,84 @@ AHfronted/
 - 首次使用需要添加至少一个学习分类
 - 建议每天坚持学习，系统会自动安排复习计划
 - 可以根据需要调整学习计划的难度和时间安排
+
+## 🛠️ 开发环境设置
+
+### 使用Docker快速部署
+1. **创建docker-compose.yml**
+   ```yaml
+   version: '3'
+   services:
+     mysql:
+       image: mysql:8.0
+       container_name: ahcard_mysql
+       environment:
+         MYSQL_ROOT_PASSWORD: root_password
+         MYSQL_DATABASE: ahcard_memory
+         MYSQL_USER: ahcard_user
+         MYSQL_PASSWORD: your_password
+       ports:
+         - "3306:3306"
+       volumes:
+         - mysql_data:/var/lib/mysql
+         - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+   volumes:
+     mysql_data:
+   ```
+
+2. **启动服务**
+   ```bash
+   docker-compose up -d
+   ```
+
+### 使用Node.js + Express快速搭建后端
+1. **初始化项目**
+   ```bash
+   mkdir ahcard-backend && cd ahcard-backend
+   npm init -y
+   npm install express mysql2 body-parser cors
+   ```
+
+2. **创建server.js**
+   ```javascript
+   const express = require('express');
+   const mysql = require('mysql2/promise');
+   const bodyParser = require('body-parser');
+   const cors = require('cors');
+
+   const app = express();
+   app.use(cors());
+   app.use(bodyParser.json());
+
+   // 数据库连接配置
+   const pool = mysql.createPool({
+     host: 'localhost',
+     user: 'ahcard_user',
+     password: 'your_password',
+     database: 'ahcard_memory',
+     waitForConnections: true,
+     connectionLimit: 10,
+     queueLimit: 0
+   });
+
+   // API接口实现
+   app.get('/card/getAll', async (req, res) => {
+     try {
+       const [rows] = await pool.query('SELECT * FROM cards ORDER BY startTime DESC');
+       res.json(rows);
+     } catch (error) {
+       res.status(500).json({ error: error.message });
+     }
+   });
+
+   // 其他API接口...
+
+   const PORT = 8081;
+   app.listen(PORT, () => {
+     console.log(`Server running on http://localhost:${PORT}`);
+   });
+   ```
 
 ## 🤝 贡献指南
 
